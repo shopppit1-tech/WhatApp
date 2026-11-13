@@ -21,10 +21,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 22
+      - name: Setup Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: '24'
 
       - name: Setup Java 21
         uses: actions/setup-java@v4
@@ -33,16 +33,17 @@ jobs:
           java-version: '21'
 
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
 
       - name: Install dependencies & build web bundle
         run: |
-          npm install --legacy-peer-deps
+          npm ci --legacy-peer-deps
           npm run build
 
       - name: Add Capacitor Android platform
         run: |
-          npm install --legacy-peer-deps @capacitor/core @capacitor/cli @capacitor/android
           npx cap add android
           npx cap sync android
 
