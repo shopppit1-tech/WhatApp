@@ -1,0 +1,126 @@
+name: Build Android APK & GitHub Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'Tag versi rilis (contoh: v1.0.0)'
+        required: true
+        default: 'v1.0.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build-android-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies & build web bundle
+        run: |
+          npm ci
+          npm run build
+
+      - name: Add Capacitor Android platform
+        run: |
+          npm install @capacitor/core @capacitor/cli @capacitor/android
+          npx cap add android
+          npx cap sync android
+
+      - name: Generate Android launcher icons for WhatApp
+        run: |
+          python3 -m pip install --quiet pillow
+          python3 - <<'PY'
+          from PIL import Image, ImageDraw
+          import os
+
+          src = Image.open("src/assets/images/whatapp_logo_1794610455639.jpg").convert("RGBA")
+          sizes = {
+              "mipmap-mdpi": 48,
+              "mipmap-hdpi": 72,
+              "mipmap-xhdpi": 96,
+              "mipmap-xxhdpi": 144,
+              "mipmap-xxxhdpi": 192,
+          }
+          res_dir = "android/app/src/main/res"
+          for folder, px in sizes.items():
+              out_dir = os.path.join(res_dir, folder)
+              os.makedirs(out_dir, exist_ok=True)
+              resized = src.resize((px, px), Image.Resampling.LANCZOS)
+              resized.save(os.path.join(out_dir, "ic_launcher.png"))
+              resized.save(os.path.join(out_dir, "ic_launcher_foreground.png"))
+
+              mask = Image.new("L", (px, px), 0)
+              draw = ImageDraw.Draw(mask)
+              draw.ellipse((0, 0, px - 1, px - 1), fill=255)
+              round_img = Image.new("RGBA", (px, px), (0, 0, 0, 0))
+              round_img.paste(resized, (0, 0), mask)
+              round_img.save(os.path.join(out_dir, "ic_launcher_round.png"))
+          PY
+
+      - name: Inject Android camera, microphone, wake & call notification permissions
+        run: |
+          MANIFEST="android/app/src/main/AndroidManifest.xml"
+          python3 -c '
+          p = "'$MANIFEST'"
+          s = open(p).read()
+          perms = """    <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.CAMERA" />
+              <uses-permission android:name="android.permission.RECORD_AUDIO" />
+              <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+              <uses-permission android:name="android.permission.WAKE_LOCK" />
+              <uses-permission android:name="android.permission.VIBRATE" />
+              <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+              <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />"""
+          if "RECORD_AUDIO" not in s:
+              s = s.replace("<application", perms + "\n    <application", 1)
+          if "showWhenLocked" not in s and "<activity" in s:
+              s = s.replace(
+                  "<activity",
+                  "<activity\n            android:showWhenLocked=\"true\"\n            android:turnScreenOn=\"true\"",
+                  1,
+              )
+          open(p, "w").write(s)
+          '
+
+      - name: Build Android APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+      - name: Prepare APK artifact
+        run: |
+          mkdir -p release-assets
+          TAG="${{ github.event.inputs.release_tag || github.ref_name }}"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "release-assets/WhatApp-${TAG}.apk"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.release_tag || github.ref_name }}
+          name: "WhatApp ${{ github.event.inputs.release_tag || github.ref_name }}"
+          body: |
+            Rilis resmi APK Android **WhatApp** (Obrolan, Telepon & Video Call dengan Nomor Virtual Acak).
+            - Login Akun Google dengan Nomor Virtual Acak otomatis
+            - Enkripsi End-to-End pada setiap pesan dan panggilan
+            - Panggilan Suara, Video Call, dan Manajemen Kontak Profil
+          files: release-assets/WhatApp-*.apk

@@ -1,0 +1,6 @@
+{
+  "name": "SandiWA",
+  "description": "Aplikasi pesan instan bergaya WhatsApp dengan nomor virtual acak per login Google dan enkripsi end-to-end ECDH P-256 + AES-256-GCM.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

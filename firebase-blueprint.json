@@ -1,0 +1,500 @@
+{
+  "entities": {
+    "PrivateUserInfo": {
+      "title": "PrivateUserInfo",
+      "description": "Strictly isolated PII belonging to the authenticated user (Google email, display name, current virtual number).",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "minLength": 3,
+          "maxLength": 256
+        },
+        "displayName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "currentVirtualNumber": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 32
+        },
+        "readReceiptsEnabled": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "displayName", "currentVirtualNumber", "createdAt", "updatedAt"]
+    },
+    "DirectoryProfile": {
+      "title": "DirectoryProfile",
+      "description": "Privacy-preserving public virtual identity containing only virtual number, alias, and ECDH P-256 public key.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "virtualNumber": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 32
+        },
+        "virtualNumberDigits": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 20,
+          "pattern": "^[0-9]+$"
+        },
+        "alias": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "bio": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "avatarBg": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 32
+        },
+        "avatarUrl": {
+          "type": "string",
+          "maxLength": 24576
+        },
+        "publicKey": {
+          "type": "object",
+          "description": "ECDH P-256 public JWK map (kty, crv, x, y)"
+        },
+        "isDiscoverable": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "uid",
+        "virtualNumber",
+        "virtualNumberDigits",
+        "alias",
+        "bio",
+        "avatarBg",
+        "avatarUrl",
+        "publicKey",
+        "isDiscoverable",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ChatRoom": {
+      "title": "ChatRoom",
+      "description": "Encrypted direct or group chat thread between virtual-number participants.",
+      "type": "object",
+      "properties": {
+        "chatId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["direct", "group"]
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "createdBy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "participantUids": {
+          "type": "array",
+          "description": "Bounded participant UID list (2..20)"
+        },
+        "lastMessageCiphertext": {
+          "type": "string",
+          "maxLength": 1024
+        },
+        "lastMessageIv": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "lastMessageSenderUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "lastMessageStatus": {
+          "type": "string",
+          "enum": ["sent", "delivered", "read"]
+        },
+        "lastMessageAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "chatId",
+        "type",
+        "title",
+        "createdBy",
+        "participantUids",
+        "lastMessageCiphertext",
+        "lastMessageIv",
+        "lastMessageSenderUid",
+        "lastMessageAt",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "EncryptedMessage": {
+      "title": "EncryptedMessage",
+      "description": "End-to-end encrypted message payload (AES-256-GCM + ECDH P-256).",
+      "type": "object",
+      "properties": {
+        "senderUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "senderVirtualNumber": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 32
+        },
+        "participantUids": {
+          "type": "array",
+          "description": "Participant UIDs matching parent chat for secure list queries"
+        },
+        "ciphertext": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384
+        },
+        "iv": {
+          "type": "string",
+          "minLength": 8,
+          "maxLength": 64
+        },
+        "aad": {
+          "type": "string",
+          "maxLength": 256
+        },
+        "algo": {
+          "type": "string",
+          "enum": ["ECDH-P256-AES-256-GCM"]
+        },
+        "msgType": {
+          "type": "string",
+          "enum": ["text", "image", "voice", "system"]
+        },
+        "replyToId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "status": {
+          "type": "string",
+          "enum": ["sent", "delivered", "read"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "senderUid",
+        "senderVirtualNumber",
+        "participantUids",
+        "ciphertext",
+        "iv",
+        "aad",
+        "algo",
+        "msgType",
+        "replyToId",
+        "status",
+        "createdAt"
+      ]
+    },
+    "StatusUpdate": {
+      "title": "StatusUpdate",
+      "description": "Virtual-number status update visible to signed-in users.",
+      "type": "object",
+      "properties": {
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "virtualNumber": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 32
+        },
+        "alias": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "caption": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 280
+        },
+        "bgColor": {
+          "type": "string",
+          "minLength": 4,
+          "maxLength": 32
+        },
+        "isPublic": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["ownerUid", "virtualNumber", "alias", "caption", "bgColor", "isPublic", "createdAt"]
+    },
+    "CallSession": {
+      "title": "CallSession",
+      "description": "WebRTC signaling session and call history record for encrypted voice and video calls.",
+      "type": "object",
+      "properties": {
+        "callId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "callerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "calleeUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "callerVirtualNumber": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 32
+        },
+        "calleeVirtualNumber": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 32
+        },
+        "callerAlias": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "calleeAlias": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "participantUids": {
+          "type": "array",
+          "description": "Two participant UIDs [callerUid, calleeUid]"
+        },
+        "callType": {
+          "type": "string",
+          "enum": ["audio", "video"]
+        },
+        "status": {
+          "type": "string",
+          "enum": ["ringing", "active", "ended", "rejected", "missed"]
+        },
+        "offerSdp": {
+          "type": "string",
+          "maxLength": 16384
+        },
+        "answerSdp": {
+          "type": "string",
+          "maxLength": 16384
+        },
+        "durationSec": {
+          "type": "integer"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "callId",
+        "callerUid",
+        "calleeUid",
+        "callerVirtualNumber",
+        "calleeVirtualNumber",
+        "callerAlias",
+        "calleeAlias",
+        "participantUids",
+        "callType",
+        "status",
+        "offerSdp",
+        "answerSdp",
+        "durationSec",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "IceCandidate": {
+      "title": "IceCandidate",
+      "description": "WebRTC ICE candidate exchanged between caller and callee.",
+      "type": "object",
+      "properties": {
+        "senderUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "participantUids": {
+          "type": "array",
+          "description": "Matches parent CallSession participantUids"
+        },
+        "candidate": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "sdpMid": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "sdpMLineIndex": {
+          "type": "integer"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["senderUid", "participantUids", "candidate", "sdpMid", "sdpMLineIndex", "createdAt"]
+    },
+    "SavedContact": {
+      "title": "SavedContact",
+      "description": "User-saved contact profile mapping a virtual-number user to a custom nickname and notes.",
+      "type": "object",
+      "properties": {
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "contactUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "customName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "virtualNumber": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 32
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["ownerUid", "contactUid", "customName", "virtualNumber", "notes", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/private/info": {
+      "schema": { "$ref": "#/entities/PrivateUserInfo" },
+      "description": "Owner-only PII record containing Google email and current virtual number mapping."
+    },
+    "/users/{userId}/contacts/{contactUid}": {
+      "schema": { "$ref": "#/entities/SavedContact" },
+      "description": "Personal saved contacts book with custom names and notes."
+    },
+    "/directory/{userId}": {
+      "schema": { "$ref": "#/entities/DirectoryProfile" },
+      "description": "Public virtual identity & ECDH P-256 public key directory without PII."
+    },
+    "/chats/{chatId}": {
+      "schema": { "$ref": "#/entities/ChatRoom" },
+      "description": "Chat threads with bounded participantUids and encrypted last-message preview."
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/EncryptedMessage" },
+      "description": "E2EE encrypted messages inside a chat thread."
+    },
+    "/statuses/{statusId}": {
+      "schema": { "$ref": "#/entities/StatusUpdate" },
+      "description": "Ephemeral virtual-number status updates."
+    },
+    "/calls/{callId}": {
+      "schema": { "$ref": "#/entities/CallSession" },
+      "description": "WebRTC signaling sessions and encrypted call history."
+    },
+    "/calls/{callId}/candidates/{candidateId}": {
+      "schema": { "$ref": "#/entities/IceCandidate" },
+      "description": "WebRTC ICE candidates for NAT traversal."
+    }
+  }
+}
