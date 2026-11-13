@@ -72,6 +72,7 @@ export function ChatConversationPane({
   const [recordSec, setRecordSec] = useState(0);
   const [playingVoiceId, setPlayingVoiceId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [activeMsgId, setActiveMsgId] = useState<string | null>(null);
 
   const feedEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -87,6 +88,7 @@ export function ChatConversationPane({
     setShowSearchBar(false);
     setMessageSearch('');
     setShowEmojiPicker(false);
+    setActiveMsgId(null);
   }, [thread?.chatId]);
 
   useEffect(() => {
@@ -291,19 +293,21 @@ export function ChatConversationPane({
             <>
               <button
                 type="button"
+                disabled={!peer}
                 onClick={() => onStartCall('video')}
                 aria-label="Panggilan video"
                 title="Panggilan video"
-                className="min-h-[40px] min-w-[40px] rounded-full flex items-center justify-center text-[#54656F] dark:text-[#AEBAC1] hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                className="min-h-[40px] min-w-[40px] rounded-full flex items-center justify-center text-[#54656F] dark:text-[#AEBAC1] hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
               >
                 <Video className="w-5 h-5" aria-hidden="true" />
               </button>
               <button
                 type="button"
+                disabled={!peer}
                 onClick={() => onStartCall('audio')}
                 aria-label="Panggilan suara"
                 title="Panggilan suara"
-                className="min-h-[40px] min-w-[40px] rounded-full flex items-center justify-center text-[#54656F] dark:text-[#AEBAC1] hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                className="min-h-[40px] min-w-[40px] rounded-full flex items-center justify-center text-[#54656F] dark:text-[#AEBAC1] hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer"
               >
                 <Phone className="w-5 h-5" aria-hidden="true" />
               </button>
@@ -399,6 +403,7 @@ export function ChatConversationPane({
 
               <div className={`flex ${isMine ? 'justify-end' : 'justify-start'} group`}>
                 <div
+                  onClick={() => setActiveMsgId((curr) => (curr === msg.id ? null : msg.id))}
                   className={`relative max-w-[85%] sm:max-w-[70%] lg:max-w-[60%] rounded-xl px-3 py-2 shadow-xs ${
                     isMine
                       ? 'bg-[#D9FDD3] dark:bg-[#005C4B] text-[#111B21] dark:text-[#E9EDEF] rounded-tr-xs'
@@ -443,7 +448,10 @@ export function ChatConversationPane({
                     <div className="flex items-center gap-3 min-w-[200px] py-1">
                       <button
                         type="button"
-                        onClick={() => handlePlayVoice(msg.id, decoded.durationSec)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handlePlayVoice(msg.id, decoded.durationSec);
+                        }}
                         aria-label={playingVoiceId === msg.id ? 'Jeda pesan suara' : 'Putar pesan suara'}
                         className="w-9 h-9 rounded-full bg-[#00A884] text-white flex items-center justify-center shrink-0 cursor-pointer"
                       >
@@ -480,10 +488,19 @@ export function ChatConversationPane({
 
                   {/* Footer: Timestamp + Checkmarks + Quick Actions */}
                   <div className="mt-1 flex items-center justify-end gap-1.5">
-                    <div className="opacity-0 group-hover:opacity-100 focus-within:opacity-100 flex items-center gap-1 mr-1 transition-opacity">
+                    <div
+                      className={`flex items-center gap-1 mr-1 transition-opacity ${
+                        activeMsgId === msg.id
+                          ? 'opacity-100'
+                          : 'opacity-0 group-hover:opacity-100 focus-within:opacity-100'
+                      }`}
+                    >
                       <button
                         type="button"
-                        onClick={() => setReplyTo(msg)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setReplyTo(msg);
+                        }}
                         aria-label="Balas pesan ini"
                         title="Balas"
                         className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 text-[#54656F] dark:text-[#AEBAC1] cursor-pointer"
@@ -492,7 +509,10 @@ export function ChatConversationPane({
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleCopyMessage(msg)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCopyMessage(msg);
+                        }}
                         aria-label="Salin teks pesan"
                         title="Salin"
                         className="p-1 rounded hover:bg-black/10 dark:hover:bg-white/10 text-[#54656F] dark:text-[#AEBAC1] cursor-pointer"

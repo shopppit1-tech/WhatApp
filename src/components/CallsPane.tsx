@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, Video } from 'lucide-react';
 import type { DirectoryProfile } from '../types/chat';
 import type { CallSessionDoc } from '../services/webrtcCallService';
@@ -17,23 +18,53 @@ export function CallsPane({
   currentUserUid,
   onStartCall,
 }: CallsPaneProps) {
+  const [mobileView, setMobileView] = useState<'history' | 'contacts'>('history');
   const profilesByUid = Object.fromEntries(directory.map((p) => [p.uid, p]));
   const callablePeers = directory.filter((p) => p.uid !== currentUserUid);
 
   return (
     <div className="flex-1 flex h-full overflow-hidden">
       {/* Left Call Log */}
-      <aside className="w-full md:w-[350px] lg:w-[400px] shrink-0 bg-white dark:bg-[#111B21] border-r border-black/8 dark:border-white/10 flex flex-col">
-        <header className="px-4 py-3.5 border-b border-black/5 dark:border-white/5">
+      <aside
+        className={`${
+          mobileView === 'contacts' ? 'hidden md:flex' : 'flex'
+        } w-full md:w-[350px] lg:w-[400px] shrink-0 bg-white dark:bg-[#111B21] border-r border-black/8 dark:border-white/10 flex-col`}
+      >
+        <header className="px-4 py-3.5 border-b border-black/5 dark:border-white/5 space-y-2.5">
           <h1 className="text-xl font-bold text-[#111B21] dark:text-[#E9EDEF]">Panggilan</h1>
+          <div className="md:hidden flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setMobileView('history')}
+              className="flex-1 py-1.5 px-3 rounded-lg text-xs font-medium bg-[#D9FDD3] dark:bg-[#005C4B] text-[#008069] dark:text-white cursor-pointer"
+            >
+              Riwayat
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileView('contacts')}
+              className="flex-1 py-1.5 px-3 rounded-lg text-xs font-medium bg-[#F0F2F5] dark:bg-[#202C33] text-[#54656F] dark:text-[#8696A0] cursor-pointer"
+            >
+              Kontak ({callablePeers.length})
+            </button>
+          </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto divide-y divide-black/5 dark:divide-white/5 pb-16 md:pb-2">
+        <div className="flex-1 overflow-y-auto divide-y divide-black/5 dark:divide-white/5 pb-20 md:pb-2">
           {callSessions.length === 0 ? (
             <div className="p-8 text-center">
               <p className="text-sm font-medium text-[#111B21] dark:text-[#E9EDEF]">
                 Belum ada riwayat panggilan
               </p>
+              {callablePeers.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setMobileView('contacts')}
+                  className="md:hidden mt-4 px-4 py-2 rounded-lg bg-[#00A884] text-white text-xs font-semibold hover:bg-[#008F72] cursor-pointer"
+                >
+                  Pilih Kontak Panggilan
+                </button>
+              )}
             </div>
           ) : (
             callSessions.map((session) => {
@@ -116,7 +147,27 @@ export function CallsPane({
       </aside>
 
       {/* Right Directory Quick-Dial */}
-      <section className="hidden md:flex flex-1 flex-col bg-[#F0F2F5] dark:bg-[#222E35] p-8 overflow-y-auto">
+      <section
+        className={`${
+          mobileView === 'contacts' ? 'flex' : 'hidden md:flex'
+        } flex-1 flex-col bg-[#F0F2F5] dark:bg-[#222E35] p-4 sm:p-8 pb-24 md:pb-8 overflow-y-auto`}
+      >
+        <div className="md:hidden mb-4 flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setMobileView('history')}
+            className="flex-1 py-1.5 px-3 rounded-lg text-xs font-medium bg-white dark:bg-[#111B21] text-[#54656F] dark:text-[#8696A0] cursor-pointer"
+          >
+            Riwayat
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileView('contacts')}
+            className="flex-1 py-1.5 px-3 rounded-lg text-xs font-medium bg-[#D9FDD3] dark:bg-[#005C4B] text-[#008069] dark:text-white cursor-pointer"
+          >
+            Kontak ({callablePeers.length})
+          </button>
+        </div>
         <div className="max-w-2xl mx-auto w-full space-y-6">
           <div>
             <h2 className="text-xl font-bold text-[#111B21] dark:text-[#E9EDEF]">

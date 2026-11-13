@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Send, X } from 'lucide-react';
+import { ArrowLeft, Plus, Send, X } from 'lucide-react';
 import type { DirectoryProfile, StatusItem } from '../types/chat';
 import { formatChatListTime } from '../utils/chatHelpers';
 import { Avatar } from './Avatar';
@@ -17,6 +17,7 @@ export function StatusPane({ statuses, currentUser, onPublishStatus }: StatusPan
     statuses[0] || null
   );
   const [composing, setComposing] = useState(false);
+  const [mobileShowDetail, setMobileShowDetail] = useState(false);
   const [caption, setCaption] = useState('');
   const [bgColor, setBgColor] = useState<string>(STATUS_COLORS[0]);
   const [submitting, setSubmitting] = useState(false);
@@ -37,12 +38,19 @@ export function StatusPane({ statuses, currentUser, onPublishStatus }: StatusPan
   return (
     <div className="flex-1 flex h-full overflow-hidden">
       {/* Left List */}
-      <aside className="w-full md:w-[350px] lg:w-[400px] shrink-0 bg-white dark:bg-[#111B21] border-r border-black/8 dark:border-white/10 flex flex-col">
+      <aside
+        className={`${
+          mobileShowDetail ? 'hidden md:flex' : 'flex'
+        } w-full md:w-[350px] lg:w-[400px] shrink-0 bg-white dark:bg-[#111B21] border-r border-black/8 dark:border-white/10 flex-col`}
+      >
         <header className="px-4 py-3.5 flex items-center justify-between border-b border-black/5 dark:border-white/5">
           <h1 className="text-xl font-bold text-[#111B21] dark:text-[#E9EDEF]">Status</h1>
           <button
             type="button"
-            onClick={() => setComposing(true)}
+            onClick={() => {
+              setComposing(true);
+              setMobileShowDetail(true);
+            }}
             aria-label="Buat status baru"
             className="min-h-[40px] px-3 rounded-lg bg-[#00A884] text-white text-xs font-semibold flex items-center gap-1.5 hover:bg-[#008F72] cursor-pointer"
           >
@@ -66,6 +74,7 @@ export function StatusPane({ statuses, currentUser, onPublishStatus }: StatusPan
                 onClick={() => {
                   setComposing(false);
                   setSelectedStatus(item);
+                  setMobileShowDetail(true);
                 }}
                 className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-colors cursor-pointer ${
                   selectedStatus?.id === item.id
@@ -91,12 +100,30 @@ export function StatusPane({ statuses, currentUser, onPublishStatus }: StatusPan
       </aside>
 
       {/* Right Viewer / Composer */}
-      <section className="hidden md:flex flex-1 items-center justify-center bg-[#0B141A] p-8 relative">
+      <section
+        className={`${
+          mobileShowDetail ? 'flex' : 'hidden md:flex'
+        } flex-1 flex-col items-center justify-center bg-[#0B141A] p-4 sm:p-8 pb-24 md:pb-8 relative overflow-y-auto`}
+      >
+        <div className="w-full max-w-lg md:hidden mb-3">
+          <button
+            type="button"
+            onClick={() => {
+              setComposing(false);
+              setMobileShowDetail(false);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white/10 text-white text-xs font-semibold cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+            <span>Kembali</span>
+          </button>
+        </div>
+
         {composing ? (
           <form
             onSubmit={handlePublish}
             style={{ backgroundColor: bgColor }}
-            className="w-full max-w-lg rounded-2xl p-8 text-white shadow-2xl space-y-6"
+            className="w-full max-w-lg rounded-2xl p-6 sm:p-8 text-white shadow-2xl space-y-6"
           >
             <div className="flex items-center justify-between">
               <div>
@@ -105,7 +132,10 @@ export function StatusPane({ statuses, currentUser, onPublishStatus }: StatusPan
               </div>
               <button
                 type="button"
-                onClick={() => setComposing(false)}
+                onClick={() => {
+                  setComposing(false);
+                  setMobileShowDetail(false);
+                }}
                 aria-label="Batal buat status"
                 className="p-2 rounded-full hover:bg-white/15 cursor-pointer"
               >

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import {
+  ArrowLeft,
   Check,
   Copy,
   Edit3,
@@ -46,6 +47,7 @@ export function ContactsPane({
     savedContacts[0]?.contactUid || null
   );
   const [showForm, setShowForm] = useState(false);
+  const [mobileShowDetail, setMobileShowDetail] = useState(false);
 
   // Add / Edit Contact Form State
   const [virtualInput, setVirtualInput] = useState('');
@@ -97,6 +99,7 @@ export function ContactsPane({
       setNotes('');
     }
     setShowForm(true);
+    setMobileShowDetail(true);
   }
 
   async function handleFormSubmit(e: React.FormEvent) {
@@ -156,7 +159,11 @@ export function ContactsPane({
   return (
     <div className="flex-1 flex h-full overflow-hidden">
       {/* Left Contacts List */}
-      <aside className="w-full md:w-[350px] lg:w-[400px] shrink-0 bg-white dark:bg-[#111B21] border-r border-black/8 dark:border-white/10 flex flex-col">
+      <aside
+        className={`${
+          mobileShowDetail ? 'hidden md:flex' : 'flex'
+        } w-full md:w-[350px] lg:w-[400px] shrink-0 bg-white dark:bg-[#111B21] border-r border-black/8 dark:border-white/10 flex-col`}
+      >
         <header className="px-4 pt-3.5 pb-2.5 flex items-center justify-between gap-2">
           <div>
             <h1 className="text-xl font-bold text-[#111B21] dark:text-[#E9EDEF]">Kontak</h1>
@@ -245,6 +252,7 @@ export function ContactsPane({
                     onClick={() => {
                       setShowForm(false);
                       setSelectedUid(c.contactUid);
+                      setMobileShowDetail(true);
                     }}
                     className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-colors cursor-pointer ${
                       isSelected
@@ -285,6 +293,7 @@ export function ContactsPane({
                   onClick={() => {
                     setShowForm(false);
                     setSelectedUid(peer.uid);
+                    setMobileShowDetail(true);
                   }}
                   className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-colors cursor-pointer ${
                     isSelected
@@ -321,7 +330,25 @@ export function ContactsPane({
       </aside>
 
       {/* Right Contact Profile / Add Contact Form */}
-      <section className="flex-1 h-full overflow-y-auto bg-[#F0F2F5] dark:bg-[#0B141A] p-4 sm:p-8 flex items-start justify-center">
+      <section
+        className={`${
+          mobileShowDetail ? 'flex' : 'hidden md:flex'
+        } flex-1 h-full overflow-y-auto bg-[#F0F2F5] dark:bg-[#0B141A] p-4 sm:p-8 pb-24 md:pb-8 flex-col items-center justify-start`}
+      >
+        <div className="w-full max-w-lg md:hidden mb-3">
+          <button
+            type="button"
+            onClick={() => {
+              setShowForm(false);
+              setMobileShowDetail(false);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-white dark:bg-[#111B21] border border-black/8 dark:border-white/10 text-xs font-semibold text-[#111B21] dark:text-[#E9EDEF] cursor-pointer"
+          >
+            <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+            <span>Kembali ke kontak</span>
+          </button>
+        </div>
+
         {showForm ? (
           <form
             onSubmit={handleFormSubmit}
@@ -333,7 +360,10 @@ export function ContactsPane({
               </h2>
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={() => {
+                  setShowForm(false);
+                  setMobileShowDetail(false);
+                }}
                 aria-label="Tutup form kontak"
                 className="p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-[#54656F] dark:text-[#AEBAC1] cursor-pointer"
               >
@@ -425,7 +455,10 @@ export function ContactsPane({
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={() => {
+                  setShowForm(false);
+                  setMobileShowDetail(false);
+                }}
                 className="px-4 py-2 rounded-xl bg-[#F0F2F5] dark:bg-[#202C33] text-xs font-semibold text-[#54656F] dark:text-[#AEBAC1] cursor-pointer"
               >
                 Batal
@@ -539,6 +572,7 @@ export function ContactsPane({
                   onClick={async () => {
                     await onDeleteContact(selectedSaved.contactUid);
                     setSelectedUid(null);
+                    setMobileShowDetail(false);
                   }}
                   aria-label="Hapus kontak tersimpan"
                   className="py-2.5 px-4 rounded-xl bg-red-600/10 hover:bg-red-600/20 text-red-600 dark:text-red-400 text-xs font-semibold flex items-center gap-1.5 cursor-pointer"

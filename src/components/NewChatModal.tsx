@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { MessageSquarePlus, Search, Users, X } from 'lucide-react';
+import { Check, MessageSquarePlus, Search, Users, X } from 'lucide-react';
 import type { DirectoryProfile } from '../types/chat';
 import { normalizeVirtualDigits } from '../utils/virtualNumber';
 import { Avatar } from './Avatar';
@@ -196,13 +196,16 @@ export function NewChatModal({
                   </div>
 
                   {mode === 'group' && (
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      readOnly
-                      aria-label={`Pilih ${peer.alias}`}
-                      className="w-4 h-4 accent-[#00A884]"
-                    />
+                    <span
+                      aria-hidden="true"
+                      className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-colors ${
+                        checked
+                          ? 'bg-[#00A884] border-[#00A884] text-white'
+                          : 'border-black/20 dark:border-white/25 bg-transparent'
+                      }`}
+                    >
+                      {checked && <Check className="w-3.5 h-3.5" />}
+                    </span>
                   )}
                 </button>
               );

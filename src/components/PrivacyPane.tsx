@@ -65,6 +65,8 @@ export function PrivacyPane({
       setFeedback('Notifikasi panggilan masuk aktif.');
     } else if (result === 'denied') {
       setFeedback('Izin notifikasi diblokir browser. Aktifkan lewat setelan situs.');
+    } else {
+      setFeedback('Ketuk Izinkan pada dialog notifikasi browser.');
     }
   }
 
