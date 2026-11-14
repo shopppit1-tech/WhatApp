@@ -92,6 +92,7 @@ export default function App() {
   const [identityKeys, setIdentityKeys] = useState<ExportedIdentityPair | null>(null);
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [showAuthorizedDomainsLink, setShowAuthorizedDomainsLink] = useState(false);
 
   const [darkMode, setDarkMode] = useState<boolean>(() => {
     try {
@@ -156,6 +157,11 @@ export default function App() {
     if (!Capacitor.isNativePlatform()) return;
 
     getRedirectResult(auth).catch((err) => {
+      const message = err instanceof Error ? err.message : String(err);
+      setShowAuthorizedDomainsLink(
+        message.toLowerCase().includes('unauthorized-domain') ||
+          message.toLowerCase().includes('requested action is invalid')
+      );
       setLoginError(
         err instanceof Error
           ? `Login Google gagal: ${err.message}`
@@ -565,6 +571,7 @@ export default function App() {
     requestCallNotificationPermission().catch(() => {});
     setLoginLoading(true);
     setLoginError(null);
+    setShowAuthorizedDomainsLink(false);
     try {
       if (Capacitor.isNativePlatform()) {
         await signInWithRedirect(auth, googleProvider);
@@ -572,10 +579,38 @@ export default function App() {
         await signInWithPopup(auth, googleProvider);
       }
     } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setShowAuthorizedDomainsLink(
+        message.toLowerCase().includes('unauthorized-domain') ||
+          message.toLowerCase().includes('requested action is invalid')
+      );
       setLoginError(
         err instanceof Error
           ? `Login Google dibatalkan atau gagal: ${err.message}`
           : 'Gagal masuk dengan akun Google.'
+      );
+      setLoginLoading(false);
+    }
+  }
+
+  async function handleGoogleRedirect() {
+    unlockCallAudio();
+    requestCallNotificationPermission().catch(() => {});
+    setLoginLoading(true);
+    setLoginError(null);
+    setShowAuthorizedDomainsLink(false);
+    try {
+      await signInWithRedirect(auth, googleProvider);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setShowAuthorizedDomainsLink(
+        message.toLowerCase().includes('unauthorized-domain') ||
+          message.toLowerCase().includes('requested action is invalid')
+      );
+      setLoginError(
+        err instanceof Error
+          ? `Login Google gagal: ${err.message}`
+          : 'Gagal masuk dengan redirect Google.'
       );
       setLoginLoading(false);
     }
@@ -717,8 +752,10 @@ export default function App() {
     return (
       <LoginScreen
         onGoogleLogin={handleGoogleLogin}
+        onGoogleRedirect={handleGoogleRedirect}
         loading={loginLoading}
         errorMsg={loginError}
+        showAuthorizedDomainsLink={showAuthorizedDomainsLink}
       />
     );
   }

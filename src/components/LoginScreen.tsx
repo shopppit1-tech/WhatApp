@@ -4,14 +4,18 @@ import { PWAInstallButton } from './PWAInstallButton';
 
 interface LoginScreenProps {
   onGoogleLogin: () => void;
+  onGoogleRedirect: () => void;
   loading: boolean;
   errorMsg: string | null;
+  showAuthorizedDomainsLink: boolean;
 }
 
 export function LoginScreen({
   onGoogleLogin,
+  onGoogleRedirect,
   loading,
   errorMsg,
+  showAuthorizedDomainsLink,
 }: LoginScreenProps) {
   return (
     <div className="min-h-screen bg-[#EFEAE2] dark:bg-[#0B141A] flex flex-col">
@@ -92,6 +96,21 @@ export function LoginScreen({
               </div>
             )}
 
+            {showAuthorizedDomainsLink && (
+              <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                Domain aplikasi ini belum diizinkan Firebase. Tambahkan domain ini di{' '}
+                <a
+                  href="https://console.firebase.google.com/project/gen-lang-client-0817260391/authentication/settings"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-semibold underline underline-offset-2"
+                >
+                  Authorized Domains Firebase
+                </a>
+                .
+              </div>
+            )}
+
             <button
               type="button"
               onClick={onGoogleLogin}
@@ -108,6 +127,17 @@ export function LoginScreen({
                 {loading ? 'Menghubungkan...' : 'Masuk dengan Akun Google'}
               </span>
             </button>
+
+            {typeof window !== 'undefined' && window.top === window.self && (
+              <button
+                type="button"
+                onClick={onGoogleRedirect}
+                disabled={loading}
+                className="mt-3 w-full min-h-[44px] px-5 py-2.5 rounded-xl border border-[#00A884] text-[#008069] dark:text-[#00A884] font-semibold text-sm hover:bg-[#00A884]/10 disabled:opacity-60 transition-colors cursor-pointer"
+              >
+                Alternatif Login HP (Halaman Penuh)
+              </button>
+            )}
           </div>
         </div>
       </main>
