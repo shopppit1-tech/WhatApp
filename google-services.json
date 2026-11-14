@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "26822846187",
+    "project_id": "gen-lang-client-0817260391",
+    "storage_bucket": "gen-lang-client-0817260391.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:26822846187:android:e426fda29f4e5538aac0ae",
+        "android_client_info": {
+          "package_name": "id.whatapp.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "26822846187-oflhb549thkhf08hganos68df585dmh1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "id.whatapp.app",
+            "certificate_hash": "26a0372d203a143b8c7e5f40ebaf2eab72081e7d"
+          }
+        },
+        {
+          "client_id": "26822846187-6qe7hvomp61d88qsaa7vhb3s2aajn065.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA5U0iWxxROph6wY96s1J9k586F7Xk3j7w"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "26822846187-6qe7hvomp61d88qsaa7vhb3s2aajn065.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

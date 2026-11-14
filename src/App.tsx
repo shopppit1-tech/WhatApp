@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  getRedirectResult,
   onAuthStateChanged,
   signInWithPopup,
-  signInWithRedirect,
+  signInWithCredential,
   signOut,
+  GoogleAuthProvider,
   type User,
 } from 'firebase/auth';
 import { Capacitor } from '@capacitor/core';
+import { FirebaseAuthentication } from '@capacitor-firebase/authentication';
 import { CallModal, type ActiveCallState } from './components/CallModal';
 import { CallsPane } from './components/CallsPane';
 import { ChatConversationPane } from './components/ChatConversationPane';
@@ -150,25 +151,6 @@ export default function App() {
   // Validate Firestore connectivity on boot
   useEffect(() => {
     validateFirestoreConnection();
-  }, []);
-
-  // Complete Google OAuth redirects when the Android WebView returns to the app.
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
-
-    getRedirectResult(auth).catch((err) => {
-      const message = err instanceof Error ? err.message : String(err);
-      setShowAuthorizedDomainsLink(
-        message.toLowerCase().includes('unauthorized-domain') ||
-          message.toLowerCase().includes('requested action is invalid')
-      );
-      setLoginError(
-        err instanceof Error
-          ? `Login Google gagal: ${err.message}`
-          : 'Login Google gagal saat kembali ke aplikasi.'
-      );
-      setLoginLoading(false);
-    });
   }, []);
 
   // Track tab visibility, responsive conversation pane visibility, unlock Web Audio, and register call notification SW
@@ -574,7 +556,14 @@ export default function App() {
     setShowAuthorizedDomainsLink(false);
     try {
       if (Capacitor.isNativePlatform()) {
-        await signInWithRedirect(auth, googleProvider);
+        const result = await FirebaseAuthentication.signInWithGoogle({
+          skipNativeAuth: true,
+        });
+        const idToken = result.credential?.idToken;
+        if (!idToken) {
+          throw new Error('Token Google tidak diterima dari login native.');
+        }
+        await signInWithCredential(auth, GoogleAuthProvider.credential(idToken));
       } else {
         await signInWithPopup(auth, googleProvider);
       }
@@ -594,26 +583,7 @@ export default function App() {
   }
 
   async function handleGoogleRedirect() {
-    unlockCallAudio();
-    requestCallNotificationPermission().catch(() => {});
-    setLoginLoading(true);
-    setLoginError(null);
-    setShowAuthorizedDomainsLink(false);
-    try {
-      await signInWithRedirect(auth, googleProvider);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setShowAuthorizedDomainsLink(
-        message.toLowerCase().includes('unauthorized-domain') ||
-          message.toLowerCase().includes('requested action is invalid')
-      );
-      setLoginError(
-        err instanceof Error
-          ? `Login Google gagal: ${err.message}`
-          : 'Gagal masuk dengan redirect Google.'
-      );
-      setLoginLoading(false);
-    }
+    await handleGoogleLogin();
   }
 
   async function handleLogout() {
