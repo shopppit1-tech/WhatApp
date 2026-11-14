@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { onAuthStateChanged, signInWithPopup, signOut, type User } from 'firebase/auth';
+import {
+  getRedirectResult,
+  onAuthStateChanged,
+  signInWithPopup,
+  signInWithRedirect,
+  signOut,
+  type User,
+} from 'firebase/auth';
+import { Capacitor } from '@capacitor/core';
 import { CallModal, type ActiveCallState } from './components/CallModal';
 import { CallsPane } from './components/CallsPane';
 import { ChatConversationPane } from './components/ChatConversationPane';
@@ -141,6 +149,20 @@ export default function App() {
   // Validate Firestore connectivity on boot
   useEffect(() => {
     validateFirestoreConnection();
+  }, []);
+
+  // Complete Google OAuth redirects when the Android WebView returns to the app.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    getRedirectResult(auth).catch((err) => {
+      setLoginError(
+        err instanceof Error
+          ? `Login Google gagal: ${err.message}`
+          : 'Login Google gagal saat kembali ke aplikasi.'
+      );
+      setLoginLoading(false);
+    });
   }, []);
 
   // Track tab visibility, responsive conversation pane visibility, unlock Web Audio, and register call notification SW
@@ -544,7 +566,11 @@ export default function App() {
     setLoginLoading(true);
     setLoginError(null);
     try {
-      await signInWithPopup(auth, googleProvider);
+      if (Capacitor.isNativePlatform()) {
+        await signInWithRedirect(auth, googleProvider);
+      } else {
+        await signInWithPopup(auth, googleProvider);
+      }
     } catch (err) {
       setLoginError(
         err instanceof Error
