@@ -54,6 +54,36 @@ function tsToMs(val: unknown): number {
   return Date.now();
 }
 
+const MAX_SDP_FIELD_LENGTH = 16_384;
+const COMPRESSED_SDP_PREFIX = 'whatapp:gzip64:';
+
+async function encodeSdpForFirestore(sdp: string): Promise<string> {
+  if (sdp.length <= MAX_SDP_FIELD_LENGTH) return sdp;
+  if (typeof CompressionStream === 'undefined') {
+    throw new Error('Deskripsi panggilan terlalu besar untuk disimpan dengan aman.');
+  }
+  const compressedStream = new Blob([sdp]).stream().pipeThrough(new CompressionStream('gzip'));
+  const bytes = new Uint8Array(await new Response(compressedStream).arrayBuffer());
+  let binary = '';
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  const encoded = `${COMPRESSED_SDP_PREFIX}${btoa(binary)}`;
+  if (encoded.length > MAX_SDP_FIELD_LENGTH) {
+    throw new Error('Deskripsi panggilan melebihi batas ukuran yang didukung.');
+  }
+  return encoded;
+}
+
+async function decodeSdpFromFirestore(value: string): Promise<string> {
+  if (!value.startsWith(COMPRESSED_SDP_PREFIX)) return value;
+  if (typeof DecompressionStream === 'undefined') {
+    throw new Error('Perangkat ini belum mendukung pembacaan deskripsi panggilan.');
+  }
+  const binary = atob(value.slice(COMPRESSED_SDP_PREFIX.length));
+  const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+  const decompressedStream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return new Response(decompressedStream).text();
+}
+
 export function subscribeMyCallSessions(
   myUid: string,
   onData: (sessions: CallSessionDoc[]) => void
@@ -66,10 +96,9 @@ export function subscribeMyCallSessions(
   return onSnapshot(
     q,
     (snapshot) => {
-      const list: CallSessionDoc[] = [];
-      snapshot.forEach((docSnap) => {
+      void Promise.all(snapshot.docs.map(async (docSnap): Promise<CallSessionDoc> => {
         const d = docSnap.data();
-        list.push({
+        return {
           callId: String(d.callId || docSnap.id),
           callerUid: String(d.callerUid || ''),
           calleeUid: String(d.calleeUid || ''),
@@ -80,14 +109,19 @@ export function subscribeMyCallSessions(
           participantUids: Array.isArray(d.participantUids) ? d.participantUids.map(String) : [],
           callType: d.callType === 'video' ? 'video' : 'audio',
           status: (d.status as CallSignalStatus) || 'ended',
-          offerSdp: String(d.offerSdp || ''),
-          answerSdp: String(d.answerSdp || ''),
+          offerSdp: await decodeSdpFromFirestore(String(d.offerSdp || '')),
+          answerSdp: await decodeSdpFromFirestore(String(d.answerSdp || '')),
           durationSec: typeof d.durationSec === 'number' ? d.durationSec : 0,
           createdAtMs: tsToMs(d.createdAt),
+        };
+      }))
+        .then((list) => {
+          list.sort((a, b) => b.createdAtMs - a.createdAtMs);
+          onData(list);
+        })
+        .catch((error) => {
+          handleFirestoreError(error, OperationType.LIST, path);
         });
-      });
-      list.sort((a, b) => b.createdAtMs - a.createdAtMs);
-      onData(list);
     },
     (error) => {
       handleFirestoreError(error, OperationType.LIST, path);
@@ -108,6 +142,7 @@ export async function createCallSession(params: {
 }): Promise<void> {
   const path = `calls/${params.callId}`;
   try {
+    const offerSdp = await encodeSdpForFirestore(params.offerSdp);
     await setDoc(doc(db, 'calls', params.callId), {
       callId: params.callId,
       callerUid: params.callerUid,
@@ -119,7 +154,7 @@ export async function createCallSession(params: {
       participantUids: [params.callerUid, params.calleeUid],
       callType: params.callType,
       status: 'ringing',
-      offerSdp: clampString(params.offerSdp, 16384),
+      offerSdp,
       answerSdp: '',
       durationSec: 0,
       createdAt: serverTimestamp(),
@@ -133,8 +168,9 @@ export async function createCallSession(params: {
 export async function answerCallSession(callId: string, answerSdp: string): Promise<void> {
   const path = `calls/${callId}`;
   try {
+    const storedAnswerSdp = await encodeSdpForFirestore(answerSdp);
     await updateDoc(doc(db, 'calls', callId), {
-      answerSdp: clampString(answerSdp, 16384),
+      answerSdp: storedAnswerSdp,
       status: 'active',
       updatedAt: serverTimestamp(),
     });
@@ -173,7 +209,10 @@ export function subscribeSingleCall(
         return;
       }
       const d = snap.data();
-      onChange({
+      void Promise.all([
+        decodeSdpFromFirestore(String(d.offerSdp || '')),
+        decodeSdpFromFirestore(String(d.answerSdp || '')),
+      ]).then(([offerSdp, answerSdp]) => onChange({
         callId: String(d.callId || snap.id),
         callerUid: String(d.callerUid || ''),
         calleeUid: String(d.calleeUid || ''),
@@ -184,10 +223,12 @@ export function subscribeSingleCall(
         participantUids: Array.isArray(d.participantUids) ? d.participantUids.map(String) : [],
         callType: d.callType === 'video' ? 'video' : 'audio',
         status: (d.status as CallSignalStatus) || 'ended',
-        offerSdp: String(d.offerSdp || ''),
-        answerSdp: String(d.answerSdp || ''),
+        offerSdp,
+        answerSdp,
         durationSec: typeof d.durationSec === 'number' ? d.durationSec : 0,
         createdAtMs: tsToMs(d.createdAt),
+      })).catch((error) => {
+        handleFirestoreError(error, OperationType.GET, path);
       });
     },
     (error) => {

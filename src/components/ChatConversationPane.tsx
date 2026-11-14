@@ -64,6 +64,7 @@ export function ChatConversationPane({
 }: ChatConversationPaneProps) {
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [replyTo, setReplyTo] = useState<DecryptedMessage | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showSearchBar, setShowSearchBar] = useState(false);
@@ -100,21 +101,35 @@ export function ChatConversationPane({
   if (!thread) {
     return (
       <section
-        aria-label="Tampilan selamat datang"
-        className="hidden md:flex flex-1 flex-col items-center justify-center bg-[#F0F2F5] dark:bg-[#222E35] p-10 text-center border-b-[6px] border-[#00A884]"
+        aria-label="Obrolan sedang dimuat"
+        className="flex flex-1 flex-col items-center justify-center bg-[#F0F2F5] dark:bg-[#222E35] p-4 md:p-10 text-center border-b-[6px] border-[#00A884]"
       >
-        <img
-          src={whatappLogo}
-          alt="Logo WhatApp"
-          referrerPolicy="no-referrer"
-          className="w-20 h-20 rounded-2xl shadow-md object-cover mb-5"
-        />
-        <h2 className="text-2xl font-bold text-[#111B21] dark:text-[#E9EDEF] tracking-tight">
-          WhatApp
-        </h2>
-        <div className="mt-4 flex items-center gap-2 text-xs text-[#667781] dark:text-[#8696A0]">
-          <Lock className="w-3.5 h-3.5 text-[#00A884]" aria-hidden="true" />
-          <span>Pesan dan panggilan terenkripsi end-to-end.</span>
+        <div className="md:hidden flex flex-col items-center gap-4" aria-live="polite">
+          <span className="w-8 h-8 rounded-full border-2 border-[#00A884]/30 border-t-[#00A884] animate-spin" aria-hidden="true" />
+          <p className="text-sm text-[#54656F] dark:text-[#AEBAC1]">Memuat obrolan…</p>
+          <button
+            type="button"
+            onClick={onBackMobile}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-[#202C33] text-sm text-[#111B21] dark:text-[#E9EDEF]"
+          >
+            <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+            Kembali ke obrolan
+          </button>
+        </div>
+        <div className="hidden md:flex flex-col items-center justify-center text-center">
+          <img
+            src={whatappLogo}
+            alt="Logo WhatApp"
+            referrerPolicy="no-referrer"
+            className="w-20 h-20 rounded-2xl shadow-md object-cover mb-5"
+          />
+          <h2 className="text-2xl font-bold text-[#111B21] dark:text-[#E9EDEF] tracking-tight">
+            WhatApp
+          </h2>
+          <div className="mt-4 flex items-center gap-2 text-xs text-[#667781] dark:text-[#8696A0]">
+            <Lock className="w-3.5 h-3.5 text-[#00A884]" aria-hidden="true" />
+            <span>Pesan dan panggilan terenkripsi end-to-end.</span>
+          </div>
         </div>
       </section>
     );
@@ -140,11 +155,14 @@ export function ChatConversationPane({
     const trimmed = draft.trim();
     if (!trimmed || sending) return;
     setSending(true);
+    setSendError(null);
     try {
       await onSendMessage(trimmed, { msgType: 'text', replyToId: replyTo?.id });
       setDraft('');
       setReplyTo(null);
       setShowEmojiPicker(false);
+    } catch {
+      setSendError('Pesan gagal dikirim. Periksa koneksi dan coba lagi.');
     } finally {
       setSending(false);
     }
@@ -598,6 +616,11 @@ export function ChatConversationPane({
 
       {/* Composer Bar */}
       <footer className="relative px-3 py-2.5 bg-[#F0F2F5] dark:bg-[#202C33] border-t border-black/8 dark:border-white/10 shrink-0 mb-[60px] md:mb-0">
+        {sendError && (
+          <p role="alert" className="mb-2 rounded-lg bg-red-100 px-3 py-2 text-xs text-red-800 dark:bg-red-950/60 dark:text-red-200">
+            {sendError}
+          </p>
+        )}
         {showEmojiPicker && (
           <div
             role="dialog"

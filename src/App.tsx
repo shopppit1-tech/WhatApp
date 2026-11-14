@@ -596,6 +596,33 @@ export default function App() {
   async function handleStartDirectChat(peer: DirectoryProfile) {
     if (!currentUser) return;
     const chatId = await ensureDirectChatRoom(currentUser.uid, peer.uid, peer.alias);
+    const participants = [currentUser.uid, peer.uid].sort();
+    const optimisticThread: ChatThread = {
+      chatId,
+      type: 'direct',
+      title: peer.alias,
+      createdBy: currentUser.uid,
+      participantUids: participants,
+      peerUid: peer.uid,
+      lastMessageCiphertext: '',
+      lastMessageIv: '',
+      lastMessageSenderUid: '',
+      lastMessageStatus: 'sent',
+      lastMessagePreview: 'Mulai obrolan terenkripsi',
+      lastMessageAtMs: Date.now(),
+      unreadCount: 0,
+      pinned: false,
+    };
+    setRawThreads((previous) =>
+      previous.some((thread) => thread.chatId === chatId)
+        ? previous
+        : [optimisticThread, ...previous]
+    );
+    setDecryptedThreads((previous) =>
+      previous.some((thread) => thread.chatId === chatId)
+        ? previous
+        : [optimisticThread, ...previous]
+    );
     setActiveChatId(chatId);
     setActiveTab('chats');
     setMobileShowChat(true);
@@ -613,7 +640,12 @@ export default function App() {
     plaintext: string,
     opts?: { msgType?: 'text' | 'image' | 'voice'; replyToId?: string }
   ) {
-    if (!activeThread || !currentUser || !identityKeys) return;
+    if (!activeThread) {
+      throw new Error('Obrolan belum siap. Tunggu sebentar lalu coba lagi.');
+    }
+    if (!currentUser || !identityKeys) {
+      throw new Error('Sesi atau kunci enkripsi belum siap. Masuk ulang lalu coba lagi.');
+    }
     const sharedKey = await deriveChatKey(activeThread);
     if (!sharedKey) {
       throw new Error('Kunci publik lawan bicara belum tersedia.');

@@ -3,6 +3,7 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   query,
   serverTimestamp,
@@ -321,7 +322,6 @@ export function subscribeMyChats(
           lastMessageAtMs: tsToMs(d.lastMessageAt),
           unreadCount: 0,
           pinned: false,
-          isDemo: false,
         });
       });
       threads.sort((a, b) => b.lastMessageAtMs - a.lastMessageAtMs);
@@ -341,10 +341,16 @@ export async function ensureDirectChatRoom(
   const chatId = createDeterministicChatId(myUid, peerUid);
   const path = `chats/${chatId}`;
   const chatRef = doc(db, 'chats', chatId);
+  const myChatsQuery = query(
+    collection(db, 'chats'),
+    where('participantUids', 'array-contains', myUid)
+  );
   try {
-    const existing = await getDoc(chatRef);
-    if (!existing.exists()) {
-      const participants = [myUid, peerUid].sort();
+    const existingChats = await getDocs(myChatsQuery);
+    if (existingChats.docs.some((chat) => chat.id === chatId)) return chatId;
+
+    const participants = [myUid, peerUid].sort();
+    try {
       await setDoc(chatRef, {
         chatId,
         type: 'direct',
@@ -359,6 +365,11 @@ export async function ensureDirectChatRoom(
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
+    } catch (createError) {
+      // Another device may have created the deterministic room after our query.
+      const latestChats = await getDocs(myChatsQuery).catch(() => null);
+      if (latestChats?.docs.some((chat) => chat.id === chatId)) return chatId;
+      throw createError;
     }
     return chatId;
   } catch (error) {

@@ -47,10 +47,22 @@ jobs:
           npx cap add android
           cp google-services.json android/app/google-services.json
           cp whatapp-debug.keystore android/app/whatapp-debug.keystore
+          RELEASE_TAG="${{ github.event.inputs.release_tag || github.ref_name }}"
+          export RELEASE_TAG
           python3 - <<'PY'
+          import os
+          import re
           from pathlib import Path
           path = Path("android/app/build.gradle")
           content = path.read_text()
+          version = os.environ["RELEASE_TAG"].lstrip("v")
+          match = re.fullmatch(r"(\d+)\.(\d+)\.(\d+)", version)
+          if not match:
+              raise RuntimeError(f"Invalid release tag: {version}")
+          major, minor, patch = map(int, match.groups())
+          version_code = major * 10000 + minor * 100 + patch
+          content = content.replace("versionCode 1", f"versionCode {version_code}", 1)
+          content = content.replace('versionName "1.0"', f'versionName "{version}"', 1)
           content = content.replace(
               "android {\n",
               """android {
@@ -70,9 +82,16 @@ jobs:
               "    buildTypes {\n        debug { signingConfig signingConfigs.debug }\n",
               1,
           )
+          content = content.replace(
+              "        release {\n",
+              "        release {\n            signingConfig signingConfigs.debug\n",
+              1,
+          )
           path.write_text(content)
           PY
           npx cap sync android
+          mkdir -p android/app/src/main/res/raw
+          cp android-res/whatapp_call.wav android/app/src/main/res/raw/whatapp_call.wav
 
       - name: Generate Android launcher icons for WhatApp
         run: |
@@ -168,13 +187,13 @@ jobs:
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon
 
       - name: Prepare APK artifact
         run: |
           mkdir -p release-assets
           TAG="${{ github.event.inputs.release_tag || github.ref_name }}"
-          cp android/app/build/outputs/apk/debug/app-debug.apk "release-assets/WhatApp-${TAG}.apk"
+          cp android/app/build/outputs/apk/release/app-release.apk "release-assets/WhatApp-${TAG}.apk"
 
       - name: Upload APK workflow artifact
         uses: actions/upload-artifact@v4

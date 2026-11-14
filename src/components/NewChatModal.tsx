@@ -26,6 +26,7 @@ export function NewChatModal({
   const [groupTitle, setGroupTitle] = useState('');
   const [selectedUids, setSelectedUids] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   if (!open) return null;
 
@@ -52,11 +53,14 @@ export function NewChatModal({
     e.preventDefault();
     if (!groupTitle.trim() || selectedUids.length === 0 || submitting) return;
     setSubmitting(true);
+    setActionError(null);
     try {
       await onCreateGroup(groupTitle.trim(), selectedUids);
       setGroupTitle('');
       setSelectedUids([]);
       onClose();
+    } catch {
+      setActionError('Grup gagal dibuat. Periksa koneksi dan coba lagi.');
     } finally {
       setSubmitting(false);
     }
@@ -152,6 +156,12 @@ export function NewChatModal({
           </div>
         </div>
 
+        {actionError && (
+          <p role="alert" className="px-4 py-2 text-xs text-red-700 dark:text-red-300">
+            {actionError}
+          </p>
+        )}
+
         {/* Directory List */}
         <div className="flex-1 overflow-y-auto divide-y divide-black/5 dark:divide-white/5">
           {filteredPeers.length === 0 ? (
@@ -167,8 +177,17 @@ export function NewChatModal({
                   type="button"
                   onClick={async () => {
                     if (mode === 'direct') {
-                      await onStartDirectChat(peer);
-                      onClose();
+                      if (submitting) return;
+                      setSubmitting(true);
+                      setActionError(null);
+                      try {
+                        await onStartDirectChat(peer);
+                        onClose();
+                      } catch {
+                        setActionError('Obrolan gagal dibuka. Periksa koneksi dan coba lagi.');
+                      } finally {
+                        setSubmitting(false);
+                      }
                     } else {
                       toggleUid(peer.uid);
                     }

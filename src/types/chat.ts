@@ -19,7 +19,6 @@ export interface DirectoryProfile {
   avatarUrl?: string;
   publicKey: EcPublicKeyJwk;
   isDiscoverable: boolean;
-  isDemoPeer?: boolean;
   online?: boolean;
   lastSeenLabel?: string;
 }
@@ -72,7 +71,6 @@ export interface ChatThread {
   lastMessageAtMs: number;
   unreadCount: number;
   pinned?: boolean;
-  isDemo?: boolean;
 }
 
 export interface StatusItem {
