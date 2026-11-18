@@ -6,6 +6,7 @@ import {
   getDocs,
   onSnapshot,
   query,
+  runTransaction,
   serverTimestamp,
   setDoc,
   Timestamp,
@@ -31,6 +32,7 @@ import {
   generateVirtualAlias,
   normalizeVirtualDigits,
   pickAvatarColor,
+  resolveStableVirtualNumber,
 } from '../utils/virtualNumber';
 import { db, handleFirestoreError, OperationType } from './firebase';
 
@@ -55,119 +57,138 @@ export async function syncUserOnGoogleLogin(
   const uid = user.uid;
   const email = clampString(user.email || 'user@sandiwa.local', 256);
   const displayName = clampString(user.displayName || 'Pengguna Google', 100);
-  const vNum = clampString(virtualNumber, 32);
-  const vDigits = clampString(normalizeVirtualDigits(vNum), 20);
-  const alias = clampString(customAlias || generateVirtualAlias(vNum), 60);
-  const bio = clampString(customBio ?? 'Tersedia', 160);
+  const candidateNumber = clampString(virtualNumber, 32);
+  const requestedAlias = customAlias ? clampString(customAlias, 60) : undefined;
+  const requestedBio = customBio !== undefined ? clampString(customBio, 160) : undefined;
   const avatarBg = pickAvatarColor(uid);
   const avatarUrlInput =
     customAvatarUrl !== undefined ? clampString(customAvatarUrl, 24576) : undefined;
 
   const privatePath = `users/${uid}/private/info`;
   const privateRef = doc(db, 'users', uid, 'private', 'info');
-  try {
-    const existingPrivate = await getDoc(privateRef);
-    if (existingPrivate.exists()) {
-      await updateDoc(privateRef, {
-        email,
-        displayName,
-        currentVirtualNumber: vNum,
-        updatedAt: serverTimestamp(),
-      });
-    } else {
-      await setDoc(privateRef, {
-        uid,
-        email,
-        displayName,
-        currentVirtualNumber: vNum,
-        readReceiptsEnabled: true,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-    }
-  } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, privatePath);
-  }
-
   const dirPath = `directory/${uid}`;
   const dirRef = doc(db, 'directory', uid);
   try {
-    const existingDir = await getDoc(dirRef);
-    if (existingDir.exists()) {
-      const existingData = existingDir.data();
-      const keptAlias = customAlias ? alias : clampString(String(existingData?.alias || alias), 60);
-      const keptBio = customBio !== undefined ? bio : clampString(String(existingData?.bio || bio), 160);
-      const keptAvatarUrl =
+    return await runTransaction(db, async (transaction) => {
+      const [privateSnapshot, directorySnapshot] = await Promise.all([
+        transaction.get(privateRef),
+        transaction.get(dirRef),
+      ]);
+      const privateData = privateSnapshot.exists() ? privateSnapshot.data() : undefined;
+      const directoryData = directorySnapshot.exists() ? directorySnapshot.data() : undefined;
+      const privateNumber = privateData?.currentVirtualNumber;
+      const directoryNumber = directoryData?.virtualNumber;
+
+      if (
+        (privateSnapshot.exists() && typeof privateNumber !== 'string') ||
+        (directorySnapshot.exists() && typeof directoryNumber !== 'string')
+      ) {
+        throw new Error('Data nomor virtual akun tidak konsisten. Hubungi admin untuk sinkronisasi.');
+      }
+
+      const stableNumber = resolveStableVirtualNumber(
+        typeof privateNumber === 'string' ? privateNumber : undefined,
+        typeof directoryNumber === 'string' ? directoryNumber : undefined,
+        candidateNumber
+      );
+      const stableDigits = clampString(normalizeVirtualDigits(stableNumber), 20);
+      const alias = clampString(
+        requestedAlias ||
+          (typeof directoryData?.alias === 'string' ? directoryData.alias : '') ||
+          generateVirtualAlias(stableNumber),
+        60
+      );
+      const bio = clampString(
+        requestedBio !== undefined
+          ? requestedBio
+          : typeof directoryData?.bio === 'string'
+            ? directoryData.bio
+            : 'Tersedia',
+        160
+      );
+      const avatarUrl = clampString(
         avatarUrlInput !== undefined
           ? avatarUrlInput
-          : clampString(String(existingData?.avatarUrl || ''), 24576);
-      await updateDoc(dirRef, {
-        virtualNumber: vNum,
-        virtualNumberDigits: vDigits,
-        alias: keptAlias,
-        bio: keptBio,
-        avatarBg,
-        avatarUrl: keptAvatarUrl,
-        publicKey: {
-          kty: publicKey.kty,
-          crv: publicKey.crv,
-          x: publicKey.x,
-          y: publicKey.y,
-        },
-        isDiscoverable: true,
-        updatedAt: serverTimestamp(),
-      });
+          : typeof directoryData?.avatarUrl === 'string'
+            ? directoryData.avatarUrl
+            : '',
+        24576
+      );
+
+      if (privateSnapshot.exists()) {
+        transaction.update(privateRef, {
+          email,
+          displayName,
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        transaction.set(privateRef, {
+          uid,
+          email,
+          displayName,
+          currentVirtualNumber: stableNumber,
+          readReceiptsEnabled: true,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      if (directorySnapshot.exists()) {
+        transaction.update(dirRef, {
+          alias,
+          bio,
+          avatarBg,
+          avatarUrl,
+          publicKey: {
+            kty: publicKey.kty,
+            crv: publicKey.crv,
+            x: publicKey.x,
+            y: publicKey.y,
+          },
+          isDiscoverable: true,
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        transaction.set(dirRef, {
+          uid,
+          virtualNumber: stableNumber,
+          virtualNumberDigits: stableDigits,
+          alias,
+          bio,
+          avatarBg,
+          avatarUrl,
+          publicKey: {
+            kty: publicKey.kty,
+            crv: publicKey.crv,
+            x: publicKey.x,
+            y: publicKey.y,
+          },
+          isDiscoverable: true,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      }
+
       return {
         uid,
-        virtualNumber: vNum,
-        virtualNumberDigits: vDigits,
-        alias: keptAlias,
-        bio: keptBio,
+        virtualNumber: stableNumber,
+        virtualNumberDigits: stableDigits,
+        alias,
+        bio,
         avatarBg,
-        avatarUrl: keptAvatarUrl || undefined,
+        avatarUrl: avatarUrl || undefined,
         publicKey,
         isDiscoverable: true,
         online: true,
         lastSeenLabel: 'online',
       };
-    } else {
-      const initialAvatarUrl = avatarUrlInput ?? '';
-      await setDoc(dirRef, {
-        uid,
-        virtualNumber: vNum,
-        virtualNumberDigits: vDigits,
-        alias,
-        bio,
-        avatarBg,
-        avatarUrl: initialAvatarUrl,
-        publicKey: {
-          kty: publicKey.kty,
-          crv: publicKey.crv,
-          x: publicKey.x,
-          y: publicKey.y,
-        },
-        isDiscoverable: true,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      });
-    }
+    });
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, dirPath);
+    if (error instanceof Error && error.message.startsWith('Data nomor virtual akun')) {
+      throw error;
+    }
+    handleFirestoreError(error, OperationType.WRITE, `${privatePath} + ${dirPath}`);
   }
-
-  return {
-    uid,
-    virtualNumber: vNum,
-    virtualNumberDigits: vDigits,
-    alias,
-    bio,
-    avatarBg,
-    avatarUrl: avatarUrlInput || undefined,
-    publicKey,
-    isDiscoverable: true,
-    online: true,
-    lastSeenLabel: 'online',
-  };
 }
 
 export function subscribeDirectory(

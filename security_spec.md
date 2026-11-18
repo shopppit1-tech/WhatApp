@@ -6,6 +6,7 @@
 3. **E2EE Algorithm Integrity**: Messages only accept `algo == "ECDH-P256-AES-256-GCM"` with non-empty `ciphertext` and `iv`, and `createdAt == request.time`.
 4. **Immutable Ownership & Timestamps**: `uid`, `createdBy`, `senderUid`, and `createdAt` cannot be modified after creation.
 5. **No Shadow Fields / Size Guards**: Every document enforces strict `keys().hasAll(...) && keys().hasOnly(...)`, regex ID validation (`^[a-zA-Z0-9_\-]+$`), and explicit `.size()` bounds on all strings and lists.
+6. **One Immutable Virtual Number per Account**: The private user document and public directory profile must share one number at creation. The number cannot be changed or deleted by the account owner, and messages, statuses, and calls must use the number stored in that account's directory profile.
 
 ## 2. The "Dirty Dozen" Payloads (Must All Yield PERMISSION_DENIED)
 1. **PII Read Leak**: User B reads `/users/userA/private/info` -> DENIED (`!isOwner(userId)`).
@@ -20,3 +21,6 @@
 10. **Ciphertext DoS (>16KB)**: User A sends a 100KB `ciphertext` string -> DENIED (`ciphertext.size() <= 16384` fails).
 11. **Immutable Field Mutation**: User A updates `/chats/{chatId}` attempting to alter `createdBy` or `createdAt` -> DENIED (`affectedKeys().hasOnly(...)` and immutability checks fail).
 12. **Message List Participant Bypass**: User C creates a message claiming `participantUids: ["userA", "userB", "userC"]` inside a 2-person chat -> DENIED (`incoming().participantUids == get(parentChat).data.participantUids` fails).
+13. **Virtual Number Rotation**: User A updates `currentVirtualNumber` or directory `virtualNumber` -> DENIED (immutable fields are excluded from each update allowlist).
+14. **Virtual Number Deletion/Replacement**: User A deletes the private profile or directory entry and recreates it with a different number -> DENIED (owner deletes are disabled and new profile creation must match the linked document).
+15. **Virtual Number Spoofing**: User A sends a message, status, or call claiming a number other than their directory number -> DENIED (request data must match the stored account number).

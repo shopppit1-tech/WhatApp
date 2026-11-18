@@ -29,6 +29,11 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
+    function hasMatchingVirtualNumber(userId, virtualNumber) {
+      return getAfter(/databases/$(database)/documents/users/$(userId)/private/info).data.currentVirtualNumber == virtualNumber
+        && getAfter(/databases/$(database)/documents/directory/$(userId)).data.virtualNumber == virtualNumber;
+    }
+
     function isValidId(id) {
       return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
     }
@@ -203,6 +208,7 @@ service cloud.firestore {
         && isOwner(userId)
         && isValidId(userId)
         && isValidPrivateUserInfo(incoming(), userId)
+        && hasMatchingVirtualNumber(userId, incoming().currentVirtualNumber)
         && incoming().createdAt == request.time
         && incoming().updatedAt == request.time;
       allow update: if isVerifiedUser()
@@ -210,10 +216,11 @@ service cloud.firestore {
         && isValidId(userId)
         && isValidPrivateUserInfo(incoming(), userId)
         && incoming().uid == existing().uid
+        && incoming().currentVirtualNumber == existing().currentVirtualNumber
         && incoming().createdAt == existing().createdAt
         && incoming().updatedAt == request.time
-        && incoming().diff(existing()).affectedKeys().hasOnly(['email', 'displayName', 'currentVirtualNumber', 'readReceiptsEnabled', 'updatedAt']);
-      allow delete: if isOwner(userId) && isValidId(userId);
+        && incoming().diff(existing()).affectedKeys().hasOnly(['email', 'displayName', 'readReceiptsEnabled', 'updatedAt']);
+      allow delete: if false;
     }
 
     // --- 1b. Personal Saved Contact Profiles ---
@@ -249,6 +256,7 @@ service cloud.firestore {
         && isOwner(userId)
         && isValidId(userId)
         && isValidDirectoryProfile(incoming(), userId)
+        && hasMatchingVirtualNumber(userId, incoming().virtualNumber)
         && incoming().createdAt == request.time
         && incoming().updatedAt == request.time;
       allow update: if isVerifiedUser()
@@ -256,13 +264,15 @@ service cloud.firestore {
         && isValidId(userId)
         && isValidDirectoryProfile(incoming(), userId)
         && incoming().uid == existing().uid
+        && incoming().virtualNumber == existing().virtualNumber
+        && incoming().virtualNumberDigits == existing().virtualNumberDigits
         && incoming().createdAt == existing().createdAt
         && incoming().updatedAt == request.time
         && incoming().diff(existing()).affectedKeys().hasOnly([
-          'virtualNumber', 'virtualNumberDigits', 'alias', 'bio',
-          'avatarBg', 'avatarUrl', 'publicKey', 'isDiscoverable', 'updatedAt'
+          'alias', 'bio', 'avatarBg', 'avatarUrl', 'publicKey',
+          'isDiscoverable', 'updatedAt'
         ]);
-      allow delete: if isOwner(userId) && isValidId(userId);
+      allow delete: if false;
     }
 
     // --- 3. Chat Rooms & Encrypted Messages ---
@@ -337,6 +347,7 @@ service cloud.firestore {
           && isValidId(messageId)
           && isValidEncryptedMessage(incoming())
           && incoming().senderUid == request.auth.uid
+          && incoming().senderVirtualNumber == get(/databases/$(database)/documents/directory/$(request.auth.uid)).data.virtualNumber
           && incoming().createdAt == request.time
           && exists(/databases/$(database)/documents/chats/$(chatId))
           && (request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantUids)
@@ -378,6 +389,7 @@ service cloud.firestore {
         && isValidId(statusId)
         && isValidStatusUpdate(incoming())
         && incoming().ownerUid == request.auth.uid
+        && incoming().virtualNumber == get(/databases/$(database)/documents/directory/$(request.auth.uid)).data.virtualNumber
         && incoming().createdAt == request.time;
       allow update: if false;
       allow delete: if isVerifiedUser()
@@ -398,6 +410,8 @@ service cloud.firestore {
         && incoming().callerUid == request.auth.uid
         && (request.auth.uid in incoming().participantUids)
         && (incoming().calleeUid in incoming().participantUids)
+        && incoming().callerVirtualNumber == get(/databases/$(database)/documents/directory/$(request.auth.uid)).data.virtualNumber
+        && incoming().calleeVirtualNumber == get(/databases/$(database)/documents/directory/$(incoming().calleeUid)).data.virtualNumber
         && incoming().status == 'ringing'
         && incoming().createdAt == request.time
         && incoming().updatedAt == request.time;

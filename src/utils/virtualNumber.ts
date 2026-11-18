@@ -42,6 +42,22 @@ export function generateRandomVirtualNumber(): string {
   return `+62 ${prefix}-${block1}-${block2}`;
 }
 
+export function resolveStableVirtualNumber(
+  privateNumber: string | undefined,
+  directoryNumber: string | undefined,
+  candidateNumber: string
+): string {
+  if (privateNumber && directoryNumber && privateNumber !== directoryNumber) {
+    throw new Error('Data nomor virtual akun tidak konsisten. Hubungi admin untuk sinkronisasi.');
+  }
+
+  const stableNumber = directoryNumber || privateNumber || candidateNumber;
+  if (stableNumber.length < 5 || stableNumber.length > 32) {
+    throw new Error('Data nomor virtual akun tidak valid. Hubungi admin untuk sinkronisasi.');
+  }
+  return stableNumber;
+}
+
 export function normalizeVirtualDigits(virtualNumber: string): string {
   return virtualNumber.replace(/\D/g, '');
 }

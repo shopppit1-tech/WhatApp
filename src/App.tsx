@@ -44,8 +44,6 @@ import {
   upsertSavedContact,
 } from './services/firestoreChatService';
 import {
-  clearSessionVirtualNumber,
-  getOrAssignSessionVirtualNumber,
   getOrCreateIdentityKeyPair,
 } from './services/keyVault';
 import { registerSW } from 'virtual:pwa-register';
@@ -78,7 +76,7 @@ import {
   encryptTextPayload,
   type ExportedIdentityPair,
 } from './utils/crypto';
-import { createRandomId } from './utils/virtualNumber';
+import { createRandomId, generateRandomVirtualNumber } from './utils/virtualNumber';
 
 const STATUS_RANK: Record<MessageStatus, number> = {
   sent: 1,
@@ -233,8 +231,8 @@ export default function App() {
       setLoginError(null);
       try {
         const keys = await getOrCreateIdentityKeyPair(user.uid);
-        const virtualNumber = getOrAssignSessionVirtualNumber(user.uid);
-        const profile = await syncUserOnGoogleLogin(user, virtualNumber, keys.publicKey);
+        const candidateVirtualNumber = generateRandomVirtualNumber();
+        const profile = await syncUserOnGoogleLogin(user, candidateVirtualNumber, keys.publicKey);
         setFirebaseUser(user);
         setIdentityKeys(keys);
         setCurrentUser(profile);
@@ -602,9 +600,6 @@ export default function App() {
   }
 
   async function handleLogout() {
-    if (firebaseUser) {
-      clearSessionVirtualNumber(firebaseUser.uid);
-    }
     await signOut(auth);
   }
 
@@ -680,20 +675,6 @@ export default function App() {
       msgType: opts?.msgType || 'text',
       replyToId: opts?.replyToId,
     });
-  }
-
-  async function handleRotateVirtualNumber() {
-    if (!firebaseUser || !identityKeys || !currentUser) return;
-    const freshNum = getOrAssignSessionVirtualNumber(firebaseUser.uid, true);
-    const updated = await syncUserOnGoogleLogin(
-      firebaseUser,
-      freshNum,
-      identityKeys.publicKey,
-      currentUser.alias,
-      currentUser.bio,
-      currentUser.avatarUrl
-    );
-    setCurrentUser(updated);
   }
 
   async function handleUpdateProfile(alias: string, bio: string, avatarUrl?: string) {
@@ -886,7 +867,6 @@ export default function App() {
             onToggleDarkMode={() => setDarkMode((d) => !d)}
             readReceiptsEnabled={readReceiptsEnabled}
             onToggleReadReceipts={handleToggleReadReceipts}
-            onRotateVirtualNumber={handleRotateVirtualNumber}
             onUpdateProfile={handleUpdateProfile}
             onLogout={handleLogout}
           />

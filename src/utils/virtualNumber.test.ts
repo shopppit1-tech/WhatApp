@@ -6,6 +6,7 @@ import {
   generateRandomVirtualNumber,
   generateVirtualAlias,
   normalizeVirtualDigits,
+  resolveStableVirtualNumber,
 } from './virtualNumber';
 import { decodeEnvelopeContent, encodeEnvelopeContent, getInitials } from './chatHelpers';
 
@@ -20,6 +21,22 @@ test('generateRandomVirtualNumber produces formatted Indonesian virtual numbers 
     seen.add(num);
   }
   assert.ok(seen.size >= 38, 'Expected CSPRNG virtual numbers to be distinct');
+});
+
+test('resolveStableVirtualNumber keeps an existing account number instead of the new candidate', () => {
+  const assigned = '+62 899-1234-5678';
+  assert.equal(resolveStableVirtualNumber(assigned, assigned, '+62 888-9999-0000'), assigned);
+  assert.equal(resolveStableVirtualNumber(assigned, undefined, '+62 888-9999-0000'), assigned);
+  assert.equal(resolveStableVirtualNumber(undefined, assigned, '+62 888-9999-0000'), assigned);
+});
+
+test('resolveStableVirtualNumber uses a candidate only for a new account and rejects inconsistent stored values', () => {
+  const candidate = '+62 888-9999-0000';
+  assert.equal(resolveStableVirtualNumber(undefined, undefined, candidate), candidate);
+  assert.throws(
+    () => resolveStableVirtualNumber('+62 899-1234-5678', '+62 888-1111-2222', candidate),
+    /Data nomor virtual akun tidak konsisten/
+  );
 });
 
 test('generateVirtualAlias masks Google identity using trailing digits', () => {

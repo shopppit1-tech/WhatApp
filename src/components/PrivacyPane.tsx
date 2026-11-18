@@ -8,7 +8,6 @@ import {
   EyeOff,
   LogOut,
   Moon,
-  RefreshCw,
   Sun,
   Trash2,
 } from 'lucide-react';
@@ -27,7 +26,6 @@ interface PrivacyPaneProps {
   onToggleDarkMode: () => void;
   readReceiptsEnabled: boolean;
   onToggleReadReceipts: () => Promise<void>;
-  onRotateVirtualNumber: () => Promise<void>;
   onUpdateProfile: (alias: string, bio: string, avatarUrl?: string) => Promise<void>;
   onLogout: () => Promise<void>;
 }
@@ -39,7 +37,6 @@ export function PrivacyPane({
   onToggleDarkMode,
   readReceiptsEnabled,
   onToggleReadReceipts,
-  onRotateVirtualNumber,
   onUpdateProfile,
   onLogout,
 }: PrivacyPaneProps) {
@@ -49,7 +46,6 @@ export function PrivacyPane({
   const [showEmail, setShowEmail] = useState(false);
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [rotatingNum, setRotatingNum] = useState(false);
   const [togglingReceipts, setTogglingReceipts] = useState(false);
   const [notifPerm, setNotifPerm] = useState<NotificationPermission | 'unsupported'>(() =>
     getNotificationPermission()
@@ -140,17 +136,6 @@ export function PrivacyPane({
       setFeedback('Profil diperbarui.');
     } finally {
       setSaving(false);
-    }
-  }
-
-  async function handleRotateNum() {
-    setRotatingNum(true);
-    setFeedback(null);
-    try {
-      await onRotateVirtualNumber();
-      setFeedback('Nomor virtual baru aktif.');
-    } finally {
-      setRotatingNum(false);
     }
   }
 
@@ -256,18 +241,9 @@ export function PrivacyPane({
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={handleRotateNum}
-              disabled={rotatingNum}
-              className="px-4 py-2.5 rounded-xl bg-[#00A884] hover:bg-[#008F72] disabled:opacity-60 text-white text-xs font-semibold flex items-center justify-center gap-2 whitespace-nowrap shrink-0 cursor-pointer"
-            >
-              <RefreshCw
-                className={`w-4 h-4 ${rotatingNum ? 'animate-spin' : ''}`}
-                aria-hidden="true"
-              />
-              <span>Acak Nomor Baru</span>
-            </button>
+            <p className="max-w-40 text-right text-xs font-medium text-[#667781] dark:text-[#8696A0]">
+              Nomor ini tetap untuk akun Anda dan tidak dapat diubah.
+            </p>
           </div>
 
           <div className="pt-4 border-t border-black/8 dark:border-white/10 flex items-center justify-between gap-4 text-xs">
