@@ -334,6 +334,14 @@ export default function App() {
       isDiscoverable: true,
     };
 
+    // Always bring an incoming call to the foreground, including on mobile
+    // when the user is viewing another section or chat pane.
+    setActiveTab('chats');
+    setMobileShowChat(false);
+    if (typeof window !== 'undefined') {
+      window.focus();
+    }
+
     setActiveCall({
       mode: 'incoming',
       callId: ringing.callId,
@@ -342,12 +350,19 @@ export default function App() {
       incomingSession: ringing,
     });
 
-    showIncomingCallNotification({
-      callId: ringing.callId,
-      callerAlias: peerProfile.alias,
-      callerVirtualNumber: peerProfile.virtualNumber,
-      callType: ringing.callType,
-    }).catch(() => {});
+    // Prepare the native notification channel and request browser permission
+    // when possible before scheduling the incoming-call alert with sound.
+    requestCallNotificationPermission()
+      .catch(() => 'default' as const)
+      .then(() =>
+        showIncomingCallNotification({
+          callId: ringing.callId,
+          callerAlias: peerProfile.alias,
+          callerVirtualNumber: peerProfile.virtualNumber,
+          callType: ringing.callType,
+        })
+      )
+      .catch(() => {});
   }, [callSessions, currentUser, activeCall, profilesByUid]);
 
   // Helper to derive chat symmetric AES-256-GCM key
