@@ -26,6 +26,12 @@ import {
   validateFirestoreConnection,
 } from './services/firebase';
 import {
+  listenForForegroundPush,
+  notifyNewMessage,
+  registerPushToken,
+  unregisterPushToken,
+} from './services/pushService';
+import {
   createGroupChatRoom,
   deleteSavedContact,
   ensureDirectChatRoom,
@@ -151,6 +157,21 @@ export default function App() {
     validateFirestoreConnection();
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    let unsubscribe: (() => void) | undefined;
+    listenForForegroundPush()
+      .then((stop) => {
+        if (active) unsubscribe = stop;
+        else stop();
+      })
+      .catch((error) => console.warn('FCM foreground listener unavailable:', error));
+    return () => {
+      active = false;
+      unsubscribe?.();
+    };
+  }, []);
+
   // Track tab visibility, responsive conversation pane visibility, unlock Web Audio, and register call notification SW
   useEffect(() => {
     registerSW({ immediate: true });
@@ -227,6 +248,9 @@ export default function App() {
         return;
       }
 
+      void registerPushToken(user).catch((error) =>
+        console.warn('FCM token registration unavailable:', error)
+      );
       setLoginLoading(true);
       setLoginError(null);
       try {
@@ -596,6 +620,11 @@ export default function App() {
   }
 
   async function handleLogout() {
+    if (firebaseUser) {
+      await unregisterPushToken(firebaseUser).catch((error) =>
+        console.warn('FCM token cleanup unavailable:', error)
+      );
+    }
     await signOut(auth);
   }
 
@@ -660,7 +689,7 @@ export default function App() {
     const aad = `${currentUser.uid}:${activeThread.chatId}`;
     const envelope = await encryptTextPayload(sharedKey, plaintext, aad);
 
-    await sendEncryptedFirestoreMessage({
+    const messageId = await sendEncryptedFirestoreMessage({
       chatId: activeThread.chatId,
       senderUid: currentUser.uid,
       senderVirtualNumber: currentUser.virtualNumber,
@@ -671,6 +700,9 @@ export default function App() {
       msgType: opts?.msgType || 'text',
       replyToId: opts?.replyToId,
     });
+    await notifyNewMessage(activeThread.chatId, messageId).catch((error) =>
+      console.warn('FCM message notification unavailable:', error)
+    );
   }
 
   async function handleUpdateProfile(alias: string, bio: string, avatarUrl?: string) {

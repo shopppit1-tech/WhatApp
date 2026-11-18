@@ -6,6 +6,10 @@ Aplikasi perpesanan instan bergaya WhatsApp dengan:
 - **Telepon Suara & Video Call Real-Time**: Panggilan suara dan video peer-to-peer WebRTC (DTLS-SRTP) dengan pensinyalan Firestore.
 - **Kontak & Profil**: Simpan kontak berdasarkan nomor virtual dengan nama khusus & catatan, serta foto profil.
 
+## Push notifications dan cPanel
+
+Integrasi FCM web/PWA dan backend Node.js untuk cPanel tersedia di [DEPLOY_CPANEL.md](./DEPLOY_CPANEL.md). Push aktif setelah VAPID public key dan kredensial Firebase Admin dikonfigurasi di cPanel; file service account tidak boleh dimasukkan ke GitHub. Integrasi ini saat ini untuk web/PWA, bukan token FCM native APK.
+
 ## Rilis APK Otomatis di GitHub
 
 Workflow `.github/workflows/android-release.yml` telah disiapkan untuk membangun APK Android (`WhatApp-<tag>.apk`) lengkap dengan ikon aplikasi via Capacitor dan menerbitkan GitHub Release secara otomatis:
