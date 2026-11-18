@@ -18,6 +18,7 @@ export default defineConfig(() => {
           'pwa-512x512.png',
           'pwa-maskable-512x512.png',
           'call-sw.js',
+          'fcm-sw.js',
         ],
         manifest: {
           id: '/',
@@ -52,7 +53,7 @@ export default defineConfig(() => {
           ],
         },
         workbox: {
-          importScripts: ['/call-sw.js'],
+          importScripts: ['/call-sw.js', '/fcm-sw.js'],
           globPatterns: ['**/*.{js,css,html,ico,png,jpg,svg,woff,woff2}'],
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
           cleanupOutdatedCaches: true,

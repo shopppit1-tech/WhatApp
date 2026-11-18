@@ -1,0 +1,18 @@
+Options -Indexes
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  # Leave the Node.js application mount untouched.
+  RewriteRule ^api(?:/|$) - [L]
+
+  # Serve real files and directories directly.
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # React Router / SPA routes.
+  RewriteRule ^ index.html [L]
+</IfModule>

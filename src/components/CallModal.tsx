@@ -20,6 +20,7 @@ import {
   subscribeSingleCall,
   type CallSessionDoc,
 } from '../services/webrtcCallService';
+import { notifyIncomingCall } from '../services/pushService';
 import {
   acquireCallWakeLock,
   dismissCallNotification,
@@ -293,6 +294,9 @@ export function CallModal({ activeCall, currentUser, onClose }: CallModalProps) 
           callType: call!.callType,
           offerSdp: offer.sdp || '',
         });
+        void notifyIncomingCall(callId).catch((error) =>
+          console.warn('FCM call notification unavailable:', error)
+        );
 
         if (cancelled) {
           cleanupCallResources();
