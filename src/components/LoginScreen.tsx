@@ -4,7 +4,6 @@ import { PWAInstallButton } from './PWAInstallButton';
 
 interface LoginScreenProps {
   onGoogleLogin: () => void;
-  onGoogleRedirect: () => void;
   loading: boolean;
   errorMsg: string | null;
   showAuthorizedDomainsLink: boolean;
@@ -12,7 +11,6 @@ interface LoginScreenProps {
 
 export function LoginScreen({
   onGoogleLogin,
-  onGoogleRedirect,
   loading,
   errorMsg,
   showAuthorizedDomainsLink,
@@ -41,17 +39,13 @@ export function LoginScreen({
           {/* Left Column */}
           <div className="order-2 md:order-1 md:col-span-7 p-6 md:p-10 flex flex-col justify-between gap-6">
             <div>
-              <h2 className="text-xl md:text-[26px] font-bold text-[#111B21] dark:text-[#E9EDEF] leading-snug [text-wrap:balance]">
-                Obrolan privat dengan nomor virtual acak
-              </h2>
-
               <ul className="mt-6 space-y-4">
                 <li className="flex items-center gap-3.5">
                   <div className="w-9 h-9 rounded-lg bg-[#00A884]/12 text-[#008069] dark:text-[#00A884] flex items-center justify-center shrink-0">
                     <Smartphone className="w-4 h-4" aria-hidden="true" />
                   </div>
                   <p className="text-sm font-medium text-[#111B21] dark:text-[#E9EDEF]">
-                    Nomor virtual acak otomatis tiap login Google
+                    Satu nomor virtual tetap untuk setiap akun
                   </p>
                 </li>
 
@@ -127,17 +121,6 @@ export function LoginScreen({
                 {loading ? 'Menghubungkan...' : 'Masuk dengan Akun Google'}
               </span>
             </button>
-
-            {typeof window !== 'undefined' && window.top === window.self && (
-              <button
-                type="button"
-                onClick={onGoogleRedirect}
-                disabled={loading}
-                className="mt-3 w-full min-h-[44px] px-5 py-2.5 rounded-xl border border-[#00A884] text-[#008069] dark:text-[#00A884] font-semibold text-sm hover:bg-[#00A884]/10 disabled:opacity-60 transition-colors cursor-pointer"
-              >
-                Alternatif Login HP (Halaman Penuh)
-              </button>
-            )}
           </div>
         </div>
       </main>

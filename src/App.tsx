@@ -595,10 +595,6 @@ export default function App() {
     }
   }
 
-  async function handleGoogleRedirect() {
-    await handleGoogleLogin();
-  }
-
   async function handleLogout() {
     await signOut(auth);
   }
@@ -750,7 +746,6 @@ export default function App() {
     return (
       <LoginScreen
         onGoogleLogin={handleGoogleLogin}
-        onGoogleRedirect={handleGoogleRedirect}
         loading={loginLoading}
         errorMsg={loginError}
         showAuthorizedDomainsLink={showAuthorizedDomainsLink}
