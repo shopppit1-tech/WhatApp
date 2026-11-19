@@ -52,6 +52,7 @@ import {
   subscribeMyCallSessions,
   type CallSessionDoc,
 } from './services/webrtcCallService';
+import { registerPushNotifications } from './services/pushNotificationService';
 import {
   requestCallNotificationPermission,
   showIncomingCallNotification,
@@ -253,6 +254,8 @@ export default function App() {
   // Firestore real-time subscriptions once signed in
   useEffect(() => {
     if (!currentUser) return;
+
+    registerPushNotifications(currentUser.uid).catch(() => {});
 
     const unsubDir = subscribeDirectory((profiles) => {
       setDirectory(profiles);

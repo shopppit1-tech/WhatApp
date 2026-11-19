@@ -248,6 +248,39 @@ service cloud.firestore {
       allow delete: if isOwner(userId) && isValidId(userId) && isValidId(contactUid);
     }
 
+    // --- 1c. FCM Device Tokens (private, owner-write only) ---
+    match /users/{userId}/devices/{deviceId} {
+      allow get, list: if false;
+      allow create: if isVerifiedUser()
+        && isOwner(userId)
+        && isValidId(userId)
+        && deviceId is string
+        && deviceId.size() >= 6
+        && deviceId.size() <= 128
+        && incoming().keys().hasOnly(['uid', 'fcmToken', 'platform', 'enabled', 'updatedAt'])
+        && incoming().uid == userId
+        && incoming().fcmToken is string
+        && incoming().fcmToken.size() >= 20
+        && incoming().fcmToken.size() <= 4096
+        && incoming().platform is string
+        && incoming().platform == 'android'
+        && incoming().enabled is bool
+        && incoming().updatedAt == request.time;
+      allow update: if isVerifiedUser()
+        && isOwner(userId)
+        && isValidId(userId)
+        && deviceId is string
+        && incoming().keys().hasOnly(['uid', 'fcmToken', 'platform', 'enabled', 'updatedAt'])
+        && incoming().uid == existing().uid
+        && incoming().fcmToken is string
+        && incoming().fcmToken.size() >= 20
+        && incoming().fcmToken.size() <= 4096
+        && incoming().platform == existing().platform
+        && incoming().enabled is bool
+        && incoming().updatedAt == request.time;
+      allow delete: if isVerifiedUser() && isOwner(userId) && isValidId(userId);
+    }
+
     // --- 2. Public Virtual Directory (Zero PII, ECDH Public Key + Virtual Number) ---
     match /directory/{userId} {
       allow get: if isSignedIn() && isValidId(userId);
