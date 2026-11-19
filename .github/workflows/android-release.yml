@@ -90,6 +90,17 @@ jobs:
           path.write_text(content)
           PY
           npx cap sync android
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('android/app/build.gradle')
+          content = path.read_text()
+          dependency = '    implementation "com.google.firebase:firebase-messaging:24.1.0"\n'
+          if 'firebase-messaging' not in content:
+              if 'dependencies {\n' not in content:
+                  raise RuntimeError('Gradle dependencies block not found')
+              content = content.replace('dependencies {\n', 'dependencies {\n' + dependency, 1)
+          path.write_text(content)
+          PY
           mkdir -p android/app/src/main/res/raw
           cp android-res/whatapp_call.wav android/app/src/main/res/raw/whatapp_call.wav
 
