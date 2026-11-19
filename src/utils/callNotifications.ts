@@ -30,17 +30,6 @@ async function ensureNativeCallChannel(): Promise<void> {
   }
 }
 
-export function isNotificationSupported(): boolean {
-  return Capacitor.isNativePlatform() ||
-    (typeof window !== 'undefined' && 'Notification' in window);
-}
-
-export function getNotificationPermission(): NotificationPermission | 'unsupported' {
-  if (Capacitor.isNativePlatform()) return 'default';
-  if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
-  return Notification.permission;
-}
-
 export async function requestCallNotificationPermission(): Promise<
   NotificationPermission | 'unsupported'
 > {
@@ -65,95 +54,6 @@ export async function requestCallNotificationPermission(): Promise<
     return await Notification.requestPermission();
   } catch {
     return Notification.permission;
-  }
-}
-
-export async function showIncomingCallNotification(params: {
-  callId: string;
-  callerAlias: string;
-  callerVirtualNumber: string;
-  callType: 'audio' | 'video';
-}): Promise<void> {
-  const title = `${params.callType === 'video' ? 'Video Call' : 'Panggilan Suara'} Masuk`;
-  const body = `${params.callerAlias} (${params.callerVirtualNumber})`;
-  const tag = `whatapp-call-${params.callId}`;
-
-  if (Capacitor.isNativePlatform()) {
-    try {
-      const permission = await LocalNotifications.checkPermissions();
-      if (permission.display !== 'granted') return;
-      await ensureNativeCallChannel();
-      await LocalNotifications.schedule({
-        notifications: [
-          {
-            id: nativeNotificationId(params.callId),
-            title,
-            body,
-            channelId: NATIVE_CALL_CHANNEL_ID,
-            sound: NATIVE_CALL_SOUND,
-            ongoing: true,
-            autoCancel: false,
-            extra: { callId: params.callId },
-            schedule: { at: new Date(Date.now() + 50) },
-          },
-        ],
-      });
-      return;
-    } catch {
-      // Continue to the browser API fallback when the native plugin is unavailable.
-    }
-    return;
-  }
-
-  if (
-    typeof window === 'undefined' ||
-    !('Notification' in window) ||
-    Notification.permission !== 'granted'
-  ) return;
-
-  if ('serviceWorker' in navigator) {
-    try {
-      const reg = await navigator.serviceWorker.ready;
-      if (reg && 'showNotification' in reg) {
-        const options: NotificationOptions & {
-          renotify?: boolean;
-          vibrate?: number[];
-          actions?: { action: string; title: string }[];
-        } = {
-          body,
-          icon: '/pwa-192x192.png',
-          badge: '/pwa-192x192.png',
-          tag,
-          renotify: true,
-          requireInteraction: true,
-          vibrate: [700, 350, 700, 350, 700],
-          data: { callId: params.callId },
-          actions: [
-            { action: 'accept', title: 'Terima' },
-            { action: 'reject', title: 'Tolak' },
-          ],
-        };
-        await reg.showNotification(title, options);
-        return;
-      }
-    } catch {
-      // Fall back to standard Notification API below.
-    }
-  }
-
-  try {
-    const notif = new Notification(title, {
-      body,
-      icon: '/pwa-192x192.png',
-      tag,
-      requireInteraction: true,
-    });
-    notif.onclick = () => {
-      window.focus();
-      notif.close();
-    };
-  } catch {
-    // Ignore environments where window.Notification is disallowed.
   }
 }
 

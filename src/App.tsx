@@ -55,7 +55,6 @@ import {
 import { registerPushNotifications } from './services/pushNotificationService';
 import {
   requestCallNotificationPermission,
-  showIncomingCallNotification,
 } from './utils/callNotifications';
 import { unlockCallAudio } from './utils/ringtone';
 import type {
@@ -351,19 +350,6 @@ export default function App() {
       incomingSession: ringing,
     });
 
-    // Prepare the native notification channel and request browser permission
-    // when possible before scheduling the incoming-call alert with sound.
-    requestCallNotificationPermission()
-      .catch(() => 'default' as const)
-      .then(() =>
-        showIncomingCallNotification({
-          callId: ringing.callId,
-          callerAlias: peerProfile.alias,
-          callerVirtualNumber: peerProfile.virtualNumber,
-          callType: ringing.callType,
-        })
-      )
-      .catch(() => {});
   }, [callSessions, currentUser, activeCall, profilesByUid]);
 
   // Helper to derive chat symmetric AES-256-GCM key

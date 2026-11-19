@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  Bell,
   Camera,
   Check,
   Copy,
@@ -12,10 +11,6 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { DirectoryProfile } from '../types/chat';
-import {
-  getNotificationPermission,
-  requestCallNotificationPermission,
-} from '../utils/callNotifications';
 import { Avatar } from './Avatar';
 import { PWAInstallButton } from './PWAInstallButton';
 
@@ -47,24 +42,9 @@ export function PrivacyPane({
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [togglingReceipts, setTogglingReceipts] = useState(false);
-  const [notifPerm, setNotifPerm] = useState<NotificationPermission | 'unsupported'>(() =>
-    getNotificationPermission()
-  );
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const photoInputRef = useRef<HTMLInputElement>(null);
-
-  async function handleEnableCallNotifications() {
-    const result = await requestCallNotificationPermission();
-    setNotifPerm(result);
-    if (result === 'granted') {
-      setFeedback('Notifikasi panggilan masuk aktif.');
-    } else if (result === 'denied') {
-      setFeedback('Izin notifikasi diblokir browser. Aktifkan lewat setelan situs.');
-    } else {
-      setFeedback('Ketuk Izinkan pada dialog notifikasi browser.');
-    }
-  }
 
   useEffect(() => {
     setAlias(currentUser.alias);
@@ -345,33 +325,6 @@ export function PrivacyPane({
                   readReceiptsEnabled ? 'translate-x-6' : 'translate-x-1'
                 }`}
               />
-            </button>
-          </div>
-
-          <div className="p-6 flex items-center justify-between gap-4">
-            <p className="text-sm font-semibold text-[#111B21] dark:text-[#E9EDEF]">
-              Notifikasi Panggilan
-            </p>
-            <button
-              type="button"
-              onClick={handleEnableCallNotifications}
-              disabled={notifPerm === 'granted' || notifPerm === 'unsupported'}
-              className={`min-h-[40px] px-4 py-2 rounded-xl text-xs font-semibold flex items-center gap-2 cursor-pointer disabled:cursor-default ${
-                notifPerm === 'granted'
-                  ? 'bg-[#D9FDD3] dark:bg-[#005C4B] text-[#008069] dark:text-[#E9EDEF]'
-                  : 'bg-[#F0F2F5] dark:bg-[#202C33] text-[#111B21] dark:text-[#E9EDEF] hover:bg-black/5 dark:hover:bg-white/5'
-              }`}
-            >
-              <Bell className="w-4 h-4 text-[#00A884]" aria-hidden="true" />
-              <span>
-                {notifPerm === 'granted'
-                  ? 'Aktif'
-                  : notifPerm === 'denied'
-                    ? 'Diblokir'
-                    : notifPerm === 'unsupported'
-                      ? 'Tidak Didukung'
-                      : 'Aktifkan'}
-              </span>
             </button>
           </div>
 
